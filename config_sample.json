@@ -1,4 +1,11 @@
 {
-    "base_url": "http://10.0.0.2:6800/jsonrpc",
-    "secret": "test"
+    "base_url": "http://127.0.0.1:6800/jsonrpc",
+    "secret": "test",
+    "block_keywords": [
+        "XL",
+        "SD",
+        "XF",
+        "QD",
+        "BN"
+    ]
 }

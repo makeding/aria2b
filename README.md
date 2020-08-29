@@ -3,7 +3,8 @@ Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）
 
 # 原理
 通过 Aria2 rpc （就是API）自动查找迅雷的 peer 然后使用 iptables + ipset 来 ban （所以 windows 不修改是没法用的）  
-这是不修改 Aria2 源码（其实就是自己太菜了）从而 ban 掉迅雷的一个办法
+这是不修改 Aria2 源码（其实就是自己太菜了）从而 ban 掉迅雷的一个办法  
+当然经过简单改造，就可以屏蔽其它的特定客户端了 （现在的默认配置文件已经屏蔽了 迅雷 / 影音先锋 / qq旋风 / 百度网盘）
 # 安装
 依赖 `nodejs` `ipset` `iptables` // 整个脚本是 js 写的，可以轻松移植成别的语言 比如 py
 ## 依赖
@@ -56,9 +57,28 @@ Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）
     systemctl daemon-reload 
     systemctl enable aria2_ban_thunder.service
     systemctl start aria2_ban_thunder.service
+## 配置参考 (config.json)
+由于有注释，请复制 config_sample.json 无注释版本改
 
-# Enjoy～ #
-如果你觉得好用请推荐给别人（（（  
-有什么问题 发 issue
+    {
+        "base_url": "http://127.0.0.1:6800/jsonrpc", // aria2 rpc 地址 一般为 http://ip:6800/jsonrpc
+        "secret": "test", // rpc 密钥 对应 rpc-secret
+        "block_keywords": [ // 要 block 的客户端关键字
+        ]
+    }
+### blocklist 参考 (block_keywords)
+| 客户端 |  Peer名称 |
+|-|-|
+| 迅雷 | XL SD |
+| 影音先锋 | XF |
+| qq旋风 | QD |
+| 百度网盘 | BN（可能） |
+| 未知 | unknow |
+
+其他的可以参考[此源码](https://github.com/makeding/bittorrent-peerid/blob/master/index.js#L249)  
+ban 未知的 peer 按照需求添加～
+# Enjoy～ 
+如果你觉得好用请推荐给别人  
+有什么问题 发 issue 就可以了
 # License
 MIT
