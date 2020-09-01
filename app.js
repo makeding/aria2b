@@ -6,8 +6,10 @@ let config = require('./config.json')
 const { version } = require('os')
 let base_url = config.base_url
 let blocked_ips = []
+let run_flag = true
 const secret = 'token:' + config.secret
 async function run() {
+    run_flag = false
     let d = await axios.post(base_url, {
         jsonrpc: '2.0',
         method: 'aria2.tellActive',
@@ -24,6 +26,7 @@ async function run() {
             })
             await asyncForEach(d_peer.data.result[0][0], peer => {
                 let c = get_peer_name(decodePercentEncodedString(peer.peerId))
+                console.log(c)
                 if (blocked_ips.indexOf(peer.ip) == -1) {
                     if (config.block_keywords.indexOf('Unknow') > -1 && c.client == 'unknown') {
                         block_ip(peer.ip, {
@@ -37,11 +40,13 @@ async function run() {
                 }
             })
         }
+        run_flag = true
     })
 
 }
 setInterval(() => {
-    run()
+    if (run_flag)
+        run()
 }, 1000) // 频率，自己改改
 console.log('started!')
 // foreach + async 
