@@ -82,9 +82,10 @@ Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）
 | qq旋风 | QD |
 | 百度网盘 | BN（可能） |
 | 未知 | unknow |
-以上吸血 peer 参考了来自隔壁的 [qBittorrent-Enhanced-Edition](https://github.com/c0re100/qBittorrent-Enhanced-Edition/blob/ebe908f186be5fa2aba8710a543b3ac5c92b92fa/src/base/bittorrent/session.cpp#L2226) 项目的源码，在这里表示感谢
+
+以上吸血 peer 参考了来自隔壁的 [qBittorrent-Enhanced-Edition](https://github.com/c0re100/qBittorrent-Enhanced-Edition/blob/ebe908f186be5fa2aba8710a543b3ac5c92b92fa/src/base/bittorrent/session.cpp#L2226) 项目的源码，在这里表示感谢  
 如果还想屏蔽更多的 bt 客户端，可以参考 参考[这边的源码](https://github.com/makeding/bittorrent-peerid/blob/master/index.js#L249)  （没有什么必要啦 就迅雷之类的会吸血）  
-ban 未知的 peer 按照需求添加
+ban 未知的 peer 按照需求添加啦
 
 # 解 ban ip
 由于家庭宽带是动态 IP 有几率 ban 了的 IP 今天是迅雷 明天就变 qBittorrent 了，所以还是要考虑解 ban IP  
