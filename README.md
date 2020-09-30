@@ -26,8 +26,8 @@ Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）
     # iptables 设置完了 自行使用 iptables-save 保存（开机以后还ok）
     git clone https://github.com/makeding/aria2_ban_thunder.git
     cd aria2_ban_thunder
-    cp config_sample.json config.json
-    nano config.json # 或者 vim config.json 自己编辑一下
+    cp config_sample.js config.js
+    nano config.js # 或者 vim config.js 自己编辑一下
     yarn # 或者 npm i
     node app.js # 直接看看效果 ^ _ ^
 ## 使用 systemd 常驻后台 开机启动
@@ -65,8 +65,8 @@ Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）
     pm2 start --name 'aria2_ban_thunder' app.js
     pm2 save
     pm2 startup
-## 配置参考 (config.json)
-由于有注释，请复制 config_sample.json 无注释版本改
+## 配置参考 (config.js)
+由于有注释，请复制 config_sample.js 无注释版本改
 
     {
         "base_url": "http://127.0.0.1:6800/jsonrpc", // aria2 rpc 地址 一般为 http://ip:6800/jsonrpc
@@ -110,7 +110,9 @@ ban 未知的 peer 按照需求添加啦
     ipset create bt_blacklist hash:ip hashsize 4096
     iptables -I INPUT -m set --match-set bt_blacklist src -j DROP
     iptables -I FORWARD -m set --match-set bt_blacklist src -j DROP
-
+# 自动解 ban
+ipset 自带了个 timeout 的功能（详情 man ipset)   
+因为大家基本是动态ip的关系，今天这个 ip 是吸血客户端，明天也许就是正常用户了，为了降低误杀概率，还是加了这个功能
 # Enjoy～ 
 如果你觉得好用请推荐给别人  
 有什么问题 发 issue 就可以了，或者自己改改 发个 pr
