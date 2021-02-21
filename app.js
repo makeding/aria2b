@@ -2,6 +2,7 @@ const axios = require('axios')
 const { spawn } = require('child_process')
 const uuid = require('uuid').v4
 const get_peer_name = require('@huggycn/bittorrent-peerid')
+var sd = require('silly-datetime');
 let config = require('./config')
 let base_url = config.base_url
 let blocked_ips = []
@@ -61,7 +62,8 @@ async function asyncForEach(array, callback) {
 }
 function block_ip(ip, c) {
     spawn('ipset', ['add', 'bt_blacklist', ip, 'timeout', config.timeout])
-    console.log('blocked', ip, c.origin, c.client, c.version)
+     var time=sd.format(new Date(), 'YYYY-MM-DD HH:mm:ss')
+    console.log('[TimeStamp]:',time,'[Blocked]:', ip, c.origin, c.client, c.version)
     blocked_ips.push(ip)
 }
 

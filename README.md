@@ -19,7 +19,7 @@ Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）
     sudo yum install ipset
 ## 正式安装
     # 这里的 bt_blacklist 随便改成其他的也行 app.js 也要一起改
-    ipset create bt_blacklist hash:ip hashsize 4096
+    ipset create bt_blacklist hash:ip hashsize 4096 timeout 86400
     # 这里 ipset 我觉得扔 /etc/rc.local 不错？ 总之自行保存 这样重启后不用重新配置啊
     iptables -I INPUT -m set --match-set bt_blacklist src -j DROP
     iptables -I FORWARD -m set --match-set bt_blacklist src -j DROP
@@ -42,7 +42,7 @@ Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）
     User=root
     Restart=on-failure
     RestartSec=5s
-
+    
     # 这里的路径自己改改
     ExecStart=/usr/bin/node /home/aria2_ban_thunder/app.js 
     
@@ -98,11 +98,11 @@ ban 未知的 peer 按照需求添加啦
     # 1.先停止脚本（取决于你用什么方式运行的）
     systemctl stop bt_blacklist
     pm2 stop aria2_ban_thunder
-
+    
     # 2.把 iptables 规则删了
     iptables -D INPUT -m set --match-set bt_blacklist src -j DROP
     iptables -D FORWARD -m set --match-set bt_blacklist src -j DROP
-
+    
     # 3.ipset 炸了整个列表
     ipset destory bt_blacklist
     
