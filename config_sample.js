@@ -1,4 +1,4 @@
-module.export = {
+module.exports = {
     "base_url": "http://127.0.0.1:6800/jsonrpc", // rpc 地址
     "secret": "test", // secret
     "timeout": 86400, // 解 ban 时间
