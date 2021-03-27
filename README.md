@@ -93,7 +93,7 @@ iptables -D INPUT -m set --match-set bt_blacklist src -j DROP
 iptables -D FORWARD -m set --match-set bt_blacklist src -j DROP
 
 # 3.ipset 炸了整个列表
-ipset destory bt_blacklist
+ipset destroy bt_blacklist
 
 # 4.ipset iptables 都添加回去
 ipset create bt_blacklist hash:ip hashsize 4096
