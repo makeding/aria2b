@@ -1,6 +1,6 @@
 module.exports = {
     "base_url": "http://127.0.0.1:6800/jsonrpc", // rpc 地址
-    "secret": "test", // secret
+    "secret": "test", // secret (token)
     "timeout": 86400, // 解 ban 时间
     "block_keywords": [
         "XL", // 迅雷

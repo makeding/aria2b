@@ -19,9 +19,11 @@ Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）
 
 ## 下载 && 编辑
 ```
-git clone https://github.com/makeding/aria2_ban_thunder.git
+git clone https://github.com/makeding/aria2_ban_thunder.git # 克隆
 cd aria2_ban_thunder
-cp config_sample.js config.js
+yarn # 安装依赖
+# npm install # 也是安装依赖
+cp config_sample.js config.js # 配置文件
 nano config.js # 或者 vim config.js 自己编辑一下
 ```
 

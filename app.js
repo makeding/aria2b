@@ -61,17 +61,18 @@ async function asyncForEach(array, callback) {
     }
 }
 function block_ip(ip, c) {
+    let time = sd.format(new Date(), 'YYYY-MM-DD HH:mm:ss')
     spawn('ipset', ['add', 'bt_blacklist', ip, 'timeout', config.timeout])
-     var time=sd.format(new Date(), 'YYYY-MM-DD HH:mm:ss')
-    console.log('[TimeStamp]:',time,'[Blocked]:', ip, c.origin, c.client, c.version)
+    console.log('[TimeStamp]:', time, '[Blocked]:', ip, c.origin, c.client, c.version)
     blocked_ips.push(ip)
 }
 
 // 用于解码 peerid 名称
 // 代码来自 https://github.com/mayswind/AriaNg/blob/a091ee850ff45a56ab033f821727c1ad24049a60/src/scripts/services/ariaNgCommonService.js#L91
 function decodePercentEncodedString(s) {
-    if (!s)
+    if (!s){
         return 'Unknow'
+    }
     var ret = ''
     for (var i = 0; i < s.length; i++) {
         var ch = s.charAt(i)
