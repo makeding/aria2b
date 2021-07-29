@@ -27,6 +27,16 @@ cp config_sample.js config.js # 配置文件
 nano config.js # 或者 vim config.js 自己编辑一下
 ```
 
+## 添加防火墙规则
+```
+ipset create bt_blacklist hash:ip hashsize 4096
+iptables -I INPUT -m set --match-set bt_blacklist src -j DROP
+iptables -I FORWARD -m set --match-set bt_blacklist src -j DROP
+
+ipset create bt_blacklist hash:ip hashsize 4096 family inet6
+ip6tables -I INPUT -m set --match-set bt_blacklist6 src -j DROP
+ip6tables -I FORWARD -m set --match-set bt_blacklist6 src -j DROP
+```
 ## 使用 systemd 常驻后台 开机启动
 参考配置
 ```
@@ -80,28 +90,37 @@ ban 未知的 peer 按照需求添加
 
 # 解 ban ip
 由于家庭宽带是动态 IP 有几率 ban 了的 IP 今天是迅雷 明天就变 qBittorrent 了，所以还是要考虑解 ban IP  
-这里需要了解 ipset 的用法 使用 `man ipset` ｜ `ipset -h` 就知道用法了，下面是操作示范  
+这里需要了解 ipset 的用法 使用 `man ipset` / `ipset -h` 就知道用法了，下面是操作示范  
 单个 ip:
 
     ipset del bt_blacklist (输入ip)
 整个列表扬了（可以直接复制下面的运行）:
 ```
-# 1.先停止脚本（取决于你用什么方式运行的）
+# 1. 先停止脚本（取决于你用什么方式运行的）
 systemctl stop bt_blacklist
 pm2 stop aria2_ban_thunder
 
-# 2.把 iptables 规则删了
+# 2. 把 iptables 规则删了
 iptables -D INPUT -m set --match-set bt_blacklist src -j DROP
 iptables -D FORWARD -m set --match-set bt_blacklist src -j DROP
 
-# 3.ipset 炸了整个列表
-ipset destroy bt_blacklist
+ip6tables -D INPUT -m set --match-set bt_blacklist6 src -j DROP
+ip6tables -D FORWARD -m set --match-set bt_blacklist6 src -j DROP
 
-# 4.ipset iptables 都添加回去
+# 3. ipset 炸了整个列表
+ipset destroy bt_blacklist
+ipset destroy bt_blacklist6
+
+# 4. ipset iptables 都添加回去
 ipset create bt_blacklist hash:ip hashsize 4096
 iptables -I INPUT -m set --match-set bt_blacklist src -j DROP
 iptables -I FORWARD -m set --match-set bt_blacklist src -j DROP
-```
+
+ipset create bt_blacklist6 hash:ip hashsize 4096 family inet6
+
+ip6tables -I INPUT -m set --match-set bt_blacklist6 src -j DROP
+ip6tables -I FORWARD -m set --match-set bt_blacklist6 src -j DROP
+``
 
 # 自动解 ban
 ipset 自带了个 timeout 的功能（详情 man ipset)   

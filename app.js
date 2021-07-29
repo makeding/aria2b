@@ -2,7 +2,6 @@ const axios = require('axios')
 const { spawn } = require('child_process')
 const uuid = require('uuid').v4
 const get_peer_name = require('@huggycn/bittorrent-peerid')
-var sd = require('silly-datetime');
 let config = require('./config')
 let base_url = config.base_url
 let blocked_ips = []
@@ -50,27 +49,22 @@ async function run() {
 
 }
 setInterval(() => {
-    if (run_flag)
+    if (run_flag){
         run()
-}, 1000) // 频率，自己改改
-console.log('started!')
-// foreach + async 
-async function asyncForEach(array, callback) {
-    for (let index = 0; index < array.length; index++) {
-        await callback(array[index], index, array)
     }
-}
+}, 1000) // 频率，自己改改
+
 function block_ip(ip, c) {
-    let time = sd.format(new Date(), 'YYYY-MM-DD HH:mm:ss')
-    spawn('ipset', ['add', 'bt_blacklist', ip, 'timeout', config.timeout])
-    console.log('[TimeStamp]:', time, '[Blocked]:', ip, c.origin, c.client, c.version)
+    //                                                  : == ipv6
+    spawn('ipset', ['add', `bt_blacklist${ip.includes(':') ? '6' : ''}`, ip, 'timeout', config.timeout])
+    console.log(dt(),'[abt] Blocked:', ip, c.origin, c.client, c.version)
     blocked_ips.push(ip)
 }
 
 // 用于解码 peerid 名称
 // 代码来自 https://github.com/mayswind/AriaNg/blob/a091ee850ff45a56ab033f821727c1ad24049a60/src/scripts/services/ariaNgCommonService.js#L91
 function decodePercentEncodedString(s) {
-    if (!s){
+    if (!s) {
         return 'Unknow'
     }
     var ret = ''
@@ -86,3 +80,14 @@ function decodePercentEncodedString(s) {
     }
     return ret
 }
+// foreach + async 
+async function asyncForEach(array, callback) {
+    for (let index = 0; index < array.length; index++) {
+        await callback(array[index], index, array)
+    }
+}
+function dt(){
+    return new Date().toJSON().replace('T',' ').replace('Z',' ').split('.')[0]
+}
+
+console.log(dt(), '[abt] (aria2_ban_thunder) started!')

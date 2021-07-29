@@ -12,6 +12,11 @@ fi
 # 2.iptables加入防火墙
 `iptables -I INPUT -m set --match-set bt_blacklist src -j DROP`
 `iptables -I FORWARD -m set --match-set bt_blacklist src -j DROP`
-# 3.启动aria2c,并在后台运行拦截脚本，拦截日志记录在/var/log/bt_blacklist.log中
-`aria2c`
+
+`ip6tables -I INPUT -m set --match-set bt_blacklist6 src -j DROP`
+`ip6tables -I FORWARD -m set --match-set bt_blacklist6 src -j DROP`
+
+# 3. 启动 aria2c 并在后台运行拦截脚本，拦截日志记录在 /var/log/bt_blacklist.log 中
+# 按需修改启动
+# `aria2c &`
 `node $ab_path/app.js  > /var/log/bt_blacklist.log  &`
