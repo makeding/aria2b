@@ -55,8 +55,13 @@ setInterval(() => {
 }, 1000) // 频率，自己改改
 
 function block_ip(ip, c) {
-    //                                                  : == ipv6
-    spawn('ipset', ['add', `bt_blacklist${ip.includes(':') ? '6' : ''}`, ip, 'timeout', config.timeout])
+    // ipv6 
+    if(ip.includes(':')){
+        //                                          看上去 ipset ipv6 不支持 timeout ？
+        spawn('ipset', ['add', 'bt_blacklist6', ip])
+    }else{
+        spawn('ipset', ['add', 'bt_blacklist', ip, 'timeout', config.timeout])
+    }
     console.log(dt(),'[abt] Blocked:', ip, c.origin, c.client, c.version)
     blocked_ips.push(ip)
 }
