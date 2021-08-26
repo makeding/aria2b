@@ -1,6 +1,7 @@
 # aria2_ban_thunder
-Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）
+Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）  
 
+（其实开启强制加密 `bt-require-crypto=true` 后，即可过滤掉大部分国产吸血客户端）
 # 原理
 通过 Aria2 rpc （就是API）自动查找迅雷的 peer 然后使用 iptables + ipset 来 ban （所以 windows 不修改是没法用的）  
 这是不修改 Aria2 源码（其实就是自己太菜了 改不动 CPP）而 ban 掉迅雷的一个办法  
@@ -120,7 +121,7 @@ ipset create bt_blacklist6 hash:ip hashsize 4096 family inet6
 
 ip6tables -I INPUT -m set --match-set bt_blacklist6 src -j DROP
 ip6tables -I FORWARD -m set --match-set bt_blacklist6 src -j DROP
-``
+```
 
 # 自动解 ban
 ipset 自带了个 timeout 的功能（详情 man ipset)   
