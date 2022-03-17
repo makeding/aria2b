@@ -1,11 +1,12 @@
 {
     "name": "aria2_ban_thunder",
     "version": "1.0.4",
-    "main": "app.js",
     "license": "MIT",
     "dependencies": {
         "@huggycn/bittorrent-peerid": "^1.3.3",
-        "axios": "^0.20.0",
-        "uuid": "^8.3.0"
-    }
+        "axios": "^0.26.1",
+        "uuid": "^8.3.0",
+        "yargs": "^17.3.1"
+    },
+    "bin": "app.js"
 }

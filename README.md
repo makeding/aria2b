@@ -24,20 +24,18 @@ git clone https://github.com/makeding/aria2_ban_thunder.git # 克隆
 cd aria2_ban_thunder
 yarn # 安装依赖
 # npm install # 也是安装依赖
-cp config_sample.js config.js # 配置文件
-nano config.js # 或者 vim config.js 自己编辑一下
 ```
 
-## 添加防火墙规则
-```
-ipset create bt_blacklist hash:ip hashsize 4096
-iptables -I INPUT -m set --match-set bt_blacklist src -j DROP
-iptables -I FORWARD -m set --match-set bt_blacklist src -j DROP
+abt 会读取本地的 `aria2.conf` 来访问 rpc  
+默认读取的文件为 `/etc/aria2/aria2.conf`  
+可以使用 -c 来指定 aria2 配置文件
 
-ipset create bt_blacklist hash:ip hashsize 4096 family inet6
-ip6tables -I INPUT -m set --match-set bt_blacklist6 src -j DROP
-ip6tables -I FORWARD -m set --match-set bt_blacklist6 src -j DROP
-```
+    node app.js -c <path>
+
+
+也可以手动使用 -u 与 -s 手动配置
+
+    node app.js -u <url> -s <key>
 ## 使用 systemd 常驻后台 开机启动
 参考配置
 ```
@@ -89,43 +87,6 @@ pm2 startup
 如果还想屏蔽更多的 bt 客户端，可以参考 参考[这边的源码](https://github.com/makeding/bittorrent-peerid/blob/master/index.js#L249)  （没有什么必要啦 就迅雷之类的会吸血）  
 ban 未知的 peer 按照需求添加
 
-# 解 ban ip
-由于家庭宽带是动态 IP 有几率 ban 了的 IP 今天是迅雷 明天就变 qBittorrent 了，所以还是要考虑解 ban IP  
-这里需要了解 ipset 的用法 使用 `man ipset` / `ipset -h` 就知道用法了，下面是操作示范  
-单个 ip:
-
-    ipset del bt_blacklist (输入ip)
-整个列表扬了（可以直接复制下面的运行）:
-```
-# 1. 先停止脚本（取决于你用什么方式运行的）
-systemctl stop bt_blacklist
-pm2 stop aria2_ban_thunder
-
-# 2. 把 iptables 规则删了
-iptables -D INPUT -m set --match-set bt_blacklist src -j DROP
-iptables -D FORWARD -m set --match-set bt_blacklist src -j DROP
-
-ip6tables -D INPUT -m set --match-set bt_blacklist6 src -j DROP
-ip6tables -D FORWARD -m set --match-set bt_blacklist6 src -j DROP
-
-# 3. ipset 炸了整个列表
-ipset destroy bt_blacklist
-ipset destroy bt_blacklist6
-
-# 4. ipset iptables 都添加回去
-ipset create bt_blacklist hash:ip hashsize 4096
-iptables -I INPUT -m set --match-set bt_blacklist src -j DROP
-iptables -I FORWARD -m set --match-set bt_blacklist src -j DROP
-
-ipset create bt_blacklist6 hash:ip hashsize 4096 family inet6
-
-ip6tables -I INPUT -m set --match-set bt_blacklist6 src -j DROP
-ip6tables -I FORWARD -m set --match-set bt_blacklist6 src -j DROP
-```
-
-# 自动解 ban
-ipset 自带了个 timeout 的功能（详情 man ipset)   
-因为大家基本是动态ip的关系，今天这个 ip 是吸血客户端，明天也许就是正常用户了，为了降低误杀概率，还是加了这个功能
 # Enjoy～ 
 如果你觉得好用请推荐给别人  
 有什么问题 发 issue 就可以了，或者自己改改 发个 pr
