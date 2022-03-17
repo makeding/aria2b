@@ -27,28 +27,28 @@ async function cron() {
         let d = await axios.post(config.rpc_url, {
             jsonrpc: '2.0',
             method: 'aria2.tellActive',
-            id: uuid(),
-            params: [config.secret, ['gid', 'status']]
+            id: Buffer.from(`abt-${+new Date()}`).toString('base64'), // 其实就是随机数罢了，形式无所谓，大概
+            params: ['token:' + config.secret, ['gid', 'status']]
         })
         await asyncForEach(d.data.result, async t => {
             if (t.status == 'active') {
                 let d_peer = await axios.post(config.rpc_url, {
                     jsonrpc: '2.0',
                     method: 'system.multicall',
-                    id: uuid(),
-                    params: [[{ 'methodName': 'aria2.getPeers', 'params': [config.secret, t.gid] }]]
+                    id: Buffer.from(`abt-${+new Date()}`).toString('base64'),
+                    params: [[{ 'methodName': 'aria2.getPeers', 'params': ['token:' + config.secret, t.gid] }]]
                 })
-                await asyncForEach(d_peer.data.result[0][0], peer => {
+                await asyncForEach(d_peer.data.result[0][0], async peer => {
                     let c = get_peer_name(decodePercentEncodedString(peer.peerId))
-                    if (blocked_ips.indexOf(peer.ip) == -1) {
-                        if (config.block_keywords.indexOf('Unknow') > -1 && c.client == 'unknown') {
-                            block_ip(peer.ip, {
-                                origin: 'unknow',
+                    if (!blocked_ips.includes(peer.ip)) {
+                        if (config.block_keywords.includes('Unknown') && c.client == 'unknown') {
+                            await block_ip(peer.ip, {
+                                origin: 'Unknown',
                                 client: '',
                                 version: ''
                             })
                         } else if (new RegExp('(' + config.block_keywords.join('|') + ')').test(c.origin)) {
-                            block_ip(peer.ip, c)
+                            await block_ip(peer.ip, c)
                         }
                     }
                 })
@@ -76,13 +76,13 @@ async function initial() {
         try {
             await execR('iptables -D INPUT -m set --match-set bt_blacklist src -j DROP')
             await execR('ipset destroy bt_blacklist')
-            await exec('ipset create bt_blacklist hash:ip hashsize 4096')
+            await exec('ipset create bt_blacklist hash:ip hashsize 4096 timeout ' + config.timeout)
             await exec('iptables -I INPUT -m set --match-set bt_blacklist src -j DROP')
 
             if (config.ipv6) {
                 await execR('ip6tables -D INPUT -m set --match-set bt_blacklist6 src -j DROP')
                 await execR('ipset destroy bt_blacklist6')
-                await exec('ipset create bt_blacklist hash:ip hashsize 4096 family inet6')
+                await exec('ipset create bt_blacklist hash:ip hashsize 4096 family inet6 timeout ' + config.timeout)
                 await exec('ip6tables -I INPUT -m set --match-set bt_blacklist6 src -j DROP')
             }
         } catch (error) {
@@ -103,7 +103,7 @@ async function initial() {
     }
     console.log(`[abt] ${config.rpc_url} secret: ${config.secret.split('').map((x, i) => (i === 0 || i === config.secret.length - 1) ? x : '*').join('')} `)
     console.log(`[abt] 屏蔽客户端列表：${config.block_keywords.join(', ')}`)
-    honsole.logt('(aria2_ban_thunder) started!')
+    honsole.logt('aria2_ban_thunder started!')
     setInterval(() => {
         if (cron_processing_flag) {
             cron()
@@ -154,10 +154,17 @@ async function load_config_from_aria2_file(path = argv.c ? argv.c : (argv.config
 }
 async function block_ip(ip, c) {
     // ipv6 
-    if (ip.includes(':')) {
-        await exec(`ipset add bt_blacklist6 ${ip}`)
-    } else {
-        await exec(`ipset add bt_blacklist ${ip}`)
+    try {
+        if (ip.includes(':')) {
+            await exec(`ipset add bt_blacklist6 ${ip}`)
+        } else {
+            await exec(`ipset add bt_blacklist ${ip}`)
+        }
+    } catch (error) {
+        // if(!error.stderr.includes('already added')){
+        if (!JSON.stringify(error).includes('already added')) {
+            console.warn(error)
+        }
     }
 
     console.log(dt(), '[abt] Blocked:', ip, c.origin, c.client, c.version)
