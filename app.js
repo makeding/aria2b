@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const fs = require('fs')
 const axios = require('axios')
 const argv = require('yargs-parser')(process.argv.slice(2))
@@ -94,13 +95,15 @@ async function initial() {
         // honsole.logt('配置 ipset 与 iptables 成功')
     }
     // 载入配置
+    await load_config_from_aria2_file()
     if ((argv.u || argv.url) && (argv.s || argv.secret)) {
         config.rpc_url = argv.u || argv['rpc-url']
         config.secret = argv.s || argv.secret
         config.block_keywords = argv.b || argv['block-keywords'] || config.block_keywords
-    } else {
-        await load_config_from_aria2_file()
     }
+    // } else {
+    //     await load_config_from_aria2_file()
+    // }
     console.log(`[abt] ${config.rpc_url} secret: ${config.secret.split('').map((x, i) => (i === 0 || i === config.secret.length - 1) ? x : '*').join('')} `)
     console.log(`[abt] 屏蔽客户端列表：${config.block_keywords.join(', ')}`)
     honsole.logt('aria2_ban_thunder started!')
@@ -138,11 +141,11 @@ async function load_config_from_aria2_file(path = argv.c ? argv.c : (argv.config
             if (x.startsWith('rpc-secure=true')) {
                 ssl = true
             }
-            if (x.startsWith('bt-ban-client-keywords')) {
-                config.block_keywords = x.split('=')[1].split(',')
-            }
             if (x.startsWith('disable-ipv6=true')) {
                 config.ipv6 = false
+            }
+            if (x.startsWith('bt-ban-client-keywords')) {
+                config.block_keywords = x.split('=')[1].split(',')
             }
             config.rpc_url = `http${ssl ? 's' : ''}://127.0.0.1:${port}/jsonrpc`
         })
@@ -150,7 +153,6 @@ async function load_config_from_aria2_file(path = argv.c ? argv.c : (argv.config
     } catch (error) {
         console.error(`[abt] 读取配置文件(${path})失败，请检查配置文件路径以及格式是否正确`)
         console.error(error)
-        process.exit(0)
     }
 }
 async function block_ip(ip, c) {

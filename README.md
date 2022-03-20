@@ -1,46 +1,70 @@
-# aria2_ban_thunder
-Aria2 自动 ban 掉迅雷的脚本（仅限 Linux）  
+# aria2b
 
-（其实开启强制加密 `bt-require-crypto=true` 后，即可过滤掉大部分国产吸血客户端）
+aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）  
+
+由 [aria2_ban_thunder](https://github.com/makeding/aria2_ban_thunder) 改名而来  
 # 原理
-通过 Aria2 rpc （就是API）自动查找迅雷的 peer 然后使用 iptables + ipset 来 ban （所以 windows 不修改是没法用的）  
-这是不修改 Aria2 源码（其实就是自己太菜了 改不动 CPP）而 ban 掉迅雷的一个办法  
-当然经过简单改造，就可以屏蔽其它的特定客户端了 （现在的默认配置文件已经屏蔽了 迅雷 / 影音先锋 / qq旋风 / 百度网盘）  
-依赖 `nodejs` `ipset` `iptables` // 整个脚本是 js 写的，可以轻松移植成别的语言 比如 py
-## 依赖
-除了 ArchLinux 安装 nodejs 自行参考[官方教程](https://github.com/nodesource/distributions/blob/master/README.md)
-### Ubuntu / Debian
-    sudo apt-get install ipset
+通过 aria2 RPC （就是API）自动查找迅雷的 peer 然后使用 iptables + ipset 来封禁其 IP （所以 windows 不魔改是没法用的）  
 
+这是不修改 aria2 源码（其实就是自己太菜了 改不动 C++）而 ban 掉这些客户端的一个办法  
+当然经过简单改造，就可以屏蔽其它的特定客户端了 （现在的默认配置文件已经屏蔽了 迅雷 / 影音先锋 / qq旋风 / 百度网盘）  
+## 依赖
+`nodejs` `ipset` `iptables`  
+自行参考[Node.js 官方教程](https://github.com/nodesource/distributions/blob/master/README.md)  
+
+### Alpine
+
+    apk add iptables ipset nodejs
+### Ubuntu / Debian
+    apt-get install ipset
 ### ArchLinux
-    sudo pacman -S ipset yarn
+    pacman -S ipset yarn
 
 ### Centos （真的有人用？）
-    sudo yum install ipset
+    yum install ipset
 
-## 下载 && 编辑
-```
-git clone https://github.com/makeding/aria2_ban_thunder.git # 克隆
-cd aria2_ban_thunder
-yarn # 安装依赖
-# npm install # 也是安装依赖
-```
+## 下载
+二选一  
+### 稳定版（强烈推荐）
 
-abt 会读取本地的 `aria2.conf` 来访问 rpc  
-默认读取的文件为 `/etc/aria2/aria2.conf`  
+    npm -i -g aria2b
+    # 或者
+    yarn global add aria2b
+    aria2b
+
+### 开发版
+
+    git clone https://github.com/makeding/aria2b.git # 克隆
+    cd aria2b
+    yarn # 安装依赖
+    # npm install # 也是安装依赖
+    cd aria2b
+    node app.js
+
+## 配置
+目前版本已经默认开箱即用了，欢迎报告 bug  
+abt 会读取本地的 `aria2.conf` 来找 aria2 RPC 端口以及 secret 之类的  
+默认读取的路径为 `/etc/aria2/aria2.conf`  
 可以使用 -c 来指定 aria2 配置文件
 
-    node app.js -c <path>
-
+    aria2b -c <path>
 
 也可以手动使用 -u 与 -s 手动配置
 
-    node app.js -u <url> -s <key>
-## 使用 systemd 常驻后台 开机启动
+    aria2b -u <url> -s <secret>
+
+以及支持寄生配置，仅需修改 aria2 本体配置文件即可对 aria2b 做修改  
+目前支持以下配置：  
+
+```
+bt-ban-client-keywords=XL,SD,XF,QN,BD
+```
+## 守护
+### systemd
 参考配置
 ```
 [Unit]
-Description=aria2 ban thunder via ipset
+Description=aria2 ban unwelcome clients via ipset
 After=network.target
 
 [Service]
@@ -50,27 +74,24 @@ Restart=on-failure
 RestartSec=5s
 
 # 这里的路径自己改改
-ExecStart=/root/.aria2/aria2_ban_thunder/startup.sh	 
-ExecStop=/root/.aria2/aria2_ban_thunder/shutdown.sh
+ExecStart=/usr/local/bin/aria2b
 
 [Install]
 WantedBy=multi-user.target
 ```
 路径：
-> /etc/systemd/system/aria2_ban_thunder.service  
+> /usr/lib/systemd/system/aria2b.service  
 
-(或者其它你喜欢的服务名)
 ```
 systemctl daemon-reload 
-systemctl enable aria2_ban_thunder.service
-systemctl start aria2_ban_thunder.service
+systemctl enable aria2b.service --now
 ```
-## 或者使用 pm2 来常驻后台 开机启动
+### pm2
 ```
 # 自己安装
 # yarn global add pm2 
 # pacman -S pm2 # ArchLinux
-pm2 start --name 'aria2_ban_thunder' app.js
+pm2 start --name 'aria2b' aria2b
 pm2 save
 pm2 startup
 ```
@@ -89,6 +110,6 @@ ban 未知的 peer 按照需求添加
 
 # Enjoy～ 
 如果你觉得好用请推荐给别人  
-有什么问题 发 issue 就可以了，或者自己改改 发个 pr
+有什么问题 发 issue 就可以了，或者自己改改 发个 PR 吧
 # License
 MIT
