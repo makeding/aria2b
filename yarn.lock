@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@huggycn/bittorrent-peerid@^1.3.3":
-  version "1.3.3"
-  resolved "https://registry.yarnpkg.com/@huggycn/bittorrent-peerid/-/bittorrent-peerid-1.3.3.tgz#4e4bd1e2babb7a81048bd757aa8d009e85800c6c"
-  integrity sha512-Y6+Gdy2B6TRuD3qieY63zN56pm7eRDpUxHdgAlKM8SrahLHonQn+I+Qjhc6G1AvHPeyrrsK5giwwXdBh007cVg==
+"@huggycn/bittorrent-peerid@^1.3.4":
+  version "1.3.4"
+  resolved "https://registry.yarnpkg.com/@huggycn/bittorrent-peerid/-/bittorrent-peerid-1.3.4.tgz#f61fb8b2af7a9c980a2e6980f6c4f678ba242110"
+  integrity sha512-6NSI0XPSPg8EiANHZnoFsu6+9MMlUbSikyacDB5eTpUGGuHmP8ekIcEVZDkRIqMMx2/l2S+Onp1f0+/S3GAS6g==
 
 axios@^0.26.1:
   version "0.26.1"

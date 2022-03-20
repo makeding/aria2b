@@ -1,9 +1,9 @@
 {
-    "name": "aria2_ban_thunder",
+    "name": "aria2-ban-thunder",
     "version": "1.0.4",
     "license": "MIT",
     "dependencies": {
-        "@huggycn/bittorrent-peerid": "^1.3.3",
+        "@huggycn/bittorrent-peerid": "^1.3.4",
         "axios": "^0.26.1",
         "yargs-parser": "^21.0.1"
     },

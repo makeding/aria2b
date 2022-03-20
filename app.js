@@ -1,8 +1,8 @@
 const fs = require('fs')
 const axios = require('axios')
-const uuid = require('uuid').v4
 const argv = require('yargs-parser')(process.argv.slice(2))
 const get_peer_name = require('@huggycn/bittorrent-peerid')
+
 const { asyncForEach, decodePercentEncodedString, honsole, dt, exec, execR } = require('./common')
 
 let config = {
@@ -82,13 +82,13 @@ async function initial() {
             if (config.ipv6) {
                 await execR('ip6tables -D INPUT -m set --match-set bt_blacklist6 src -j DROP')
                 await execR('ipset destroy bt_blacklist6')
-                await exec('ipset create bt_blacklist hash:ip hashsize 4096 family inet6 timeout ' + config.timeout)
+                await exec('ipset create bt_blacklist6 hash:ip hashsize 4096 family inet6 timeout ' + config.timeout)
                 await exec('ip6tables -I INPUT -m set --match-set bt_blacklist6 src -j DROP')
             }
         } catch (error) {
             honsole.error(error)
-            honsole.error('请检查 iptables 与 ipset 是否正常，或者是否有权限')
-            honsole.error('将 ipset 的 bt_blacklist* 手动删除试试')
+            honsole.error('请检查 iptables 与 ipset 是否正常，或者是否以有权限的用户运行的')
+            honsole.error('另外也可以试试将 ipset 的 bt_blacklist* 手动删除试试')
             process.exit(1)
         }
         // honsole.logt('配置 ipset 与 iptables 成功')
@@ -127,6 +127,7 @@ async function load_config_from_aria2_file(path = argv.c ? argv.c : (argv.config
             config.ipv6 = true
         }
         //          读文件       转文本       去掉空格（有点暴力，可能会出事）
+        //                               没有用 replaceAll 怕目标机器 nodejs 版本太老
         fs.readFileSync(path).toString().replace(/ /g, '').split('\n').forEach(x => {
             if (x.startsWith('rpc-secret=')) {
                 config.secret = x.split('=')[1]
@@ -160,12 +161,11 @@ async function block_ip(ip, c) {
         } else {
             await exec(`ipset add bt_blacklist ${ip}`)
         }
+        console.log(dt(), '[abt] Blocked:', ip, c.origin, c.client, c.version)
     } catch (error) {
         // if(!error.stderr.includes('already added')){
         if (!JSON.stringify(error).includes('already added')) {
             console.warn(error)
         }
     }
-
-    console.log(dt(), '[abt] Blocked:', ip, c.origin, c.client, c.version)
 }
