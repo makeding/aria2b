@@ -1,11 +1,13 @@
 {
     "name": "aria2b",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "license": "MIT",
     "dependencies": {
         "@huggycn/bittorrent-peerid": "^1.3.4",
         "axios": "^0.26.1",
         "yargs-parser": "^21.0.1"
     },
+    "author": "huggy",
+    "repository": "https://github.com/makeding/aria2b",
     "bin": "app.js"
 }

@@ -31,28 +31,35 @@ function dt() {
 const honsole = {
   dev: function (...args) {
     if (process.env.dev) {
-      console.log('[abt]', ...args)
+      console.log('[aria2b]', ...args)
     }
   },
   log: function (...args) {
-    console.log('[abt]', ...args)
+    console.log('[aria2b]', ...args)
   },
   logt: function (...args) {
-    console.log('[abt]', dt(), ...args)
+    console.log('[aria2b]', dt(), ...args)
   },
   error: function (...args) {
-    console.error('[abt]', ...args)
+    console.error('[aria2b]', ...args)
   },
   warn: function (...args) {
-    console.warn('[abt]', ...args)
+    console.warn('[aria2b]', ...args)
   }
 }
 const exec = require('util').promisify((require('child_process')).exec)
+// const exec = (cmd)=>{
+//   console.log(cmd)
+//   return {
+//     stdout: '1'
+//   }
+// }
 
 const execR = async (cmd) => {
   try {
     return await exec(cmd)
   } catch (error) {
+    honsole.dev(error)
     return 'error'
   }
 }

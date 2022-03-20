@@ -38,7 +38,6 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
     cd aria2b
     yarn # 安装依赖
     # npm install # 也是安装依赖
-    cd aria2b
     node app.js
 
 ## 配置
