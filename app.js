@@ -3,11 +3,15 @@ const fs = require('fs')
 const axios = require('axios')
 const argv = require('yargs-parser')(process.argv.slice(2))
 const get_peer_name = require('@huggycn/bittorrent-peerid')
-
-const { asyncForEach, decodePercentEncodedString, honsole, dt, exec, execR } = require('./common')
+const https = require('https')
+let r_rpc = axios.default.create()
+const { asyncForEach, decodePercentEncodedString, honsole, exec, execR } = require('./common')
 
 let config = {
     rpc_url: 'http://127.0.0.1:6800/jsonrpc',
+    rpc_options: {
+        verify: true
+    },
     secret: '',
     timeout: 86400,
     block_keywords: [
@@ -25,7 +29,7 @@ let cron_processing_flag = true
 async function cron() {
     cron_processing_flag = false
     try {
-        let d = await axios.post(config.rpc_url, {
+        let d = await r_rpc.post(config.rpc_url, {
             jsonrpc: '2.0',
             method: 'aria2.tellActive',
             id: Buffer.from(`abt-${+new Date()}`).toString('base64'), // 其实就是随机数罢了，形式无所谓，大概
@@ -33,7 +37,7 @@ async function cron() {
         })
         await asyncForEach(d.data.result, async t => {
             if (t.status == 'active') {
-                let d_peer = await axios.post(config.rpc_url, {
+                let d_peer = await r_rpc.post(config.rpc_url, {
                     jsonrpc: '2.0',
                     method: 'system.multicall',
                     id: Buffer.from(`abt-${+new Date()}`).toString('base64'),
@@ -72,15 +76,30 @@ async function initial() {
         console.log(`aria2b v${require('./package.json').version} by huggy
 
 ${name} -c, --config <aria2 config path>
-${prefix}-u,--url <rpc url> default: http://127.0.0.1:6800/jsonrpc
+${prefix}-u,--url <rpc url> (default: http://127.0.0.1:6800/jsonrpc)
 ${prefix}-s, --secret <secret>
-${prefix}--timeout <seconds> default: 86400
+${prefix}--timeout <seconds> (default: 86400)
 ${prefix}--block_keywords <string>
 ${prefix}--flush flush ipset bt_blacklist(6)
 
+-----Advanced Options-----
+
+${prefix}--rpc-no-verify true / false (default: true)
+
+${prefix}--rpc-ca <ca path> / base64 encoded (twice)
+${prefix}--rpc-cert <cert path> / base64 encoded (twice)
+${prefix}--rpc-key <cert path> / base64 encoded (twice)
+Warning: if you use --rpc-ca, --rpc-cert and --rpc-key, you must input them together.
+--rpc-no-verify enabled by default when rpc=localhost
 https://github.com/makeding/aria2b`)
         process.exit(0)
     }
+    if (argv.v || argv.version) {
+        console.log(`aria2b v${require('./package.json').version} by huggy`)
+        process.exit(0)
+    }
+    // 这里考虑到有些用户可能在 /etc/sudoers 放行了 ipset 所以这里不再判断是不是有权限用户
+    // ~~其实是懒，因为下面运行不成功会报错，大概不需要这一句~~
     // if (await exec('whoami') !== 'root') {
     //     console.log('[abt] 您似乎不是 root 用户 运行的')
     //     process.exit(0)
@@ -98,6 +117,7 @@ https://github.com/makeding/aria2b`)
     //     if (x.includes('bt_blacklist ')) {
     //     }
     // })
+    // 只刷新表就退出
     if (argv.flush) {
         process.exit(0)
     }
@@ -120,6 +140,39 @@ https://github.com/makeding/aria2b`)
         config.secret = argv.s || argv.secret
         config.block_keywords = argv.b || argv['block-keywords'] || config.block_keywords
     }
+    if (argv['rpc-ca']) config.rpc_options.ca = argv['rpc-ca']
+    if (argv['rpc-cert']) config.rpc_options.cert = argv['rpc-cert']
+    if (argv['rpc-key']) config.rpc_options.key = argv['rpc-key']
+    if (argv['rpc-no-verify']) config.rpc_options.verify = false
+    // ['ca', 'cert', 'key'].forEach(x => {
+    if (config.rpc_options.ca) {
+        if (config.rpc_options.ca.length > 100) {
+            config.rpc_options.ca = Buffer.from(config.rpc_options.ca, 'base64')
+        } else {
+            config.rpc_options.ca = fs.readFileSync(config.rpc_options.ca)
+        }
+    }
+    if (config.rpc_options.cert) {
+        if (config.rpc_options.cert.length > 100) {
+            config.rpc_options.cert = Buffer.from(config.rpc_options.cert, 'base64')
+        } else {
+            config.rpc_options.cert = fs.readFileSync(config.rpc_options.cert)
+        }
+    }
+    if (config.rpc_options.key) {
+        if (config.rpc_options.key.length > 100) {
+            config.rpc_options.key = Buffer.from(config.rpc_options.key, 'base64')
+        } else {
+            config.rpc_options.key = fs.readFileSync(config.rpc_options.key)
+        }
+    }
+    // disable ssl verify in localhost
+    if (config.rpc_url.startsWith('https://127') || config.rpc_url.startsWith('http://localhost')) {
+        config.rpc_options.verify = false
+    }
+    config.rpc_options.rejectUnauthorized = config.rpc_options.verify
+    delete config.rpc_options.verify
+    r_rpc.defaults.httpsAgent = new https.Agent(config.rpc_options)
     // 载入配置 完毕
     honsole.log(`${config.rpc_url} secret: ${config.secret.split('').map((x, i) => (i === 0 || i === config.secret.length - 1) ? x : '*').join('')} `)
     honsole.log(`屏蔽客户端列表：${config.block_keywords.join(', ')}`)
@@ -149,11 +202,12 @@ async function load_config_from_aria2_file(path) {
         //          读文件       转文本       去掉空格（有点暴力，可能会出事）
         //                               没有用 replaceAll 怕目标机器 nodejs 版本太老
         fs.readFileSync(path).toString().replace(/ /g, '').split('\n').forEach(x => {
+            const value = x.split('=')[1]
             if (x.startsWith('rpc-secret=')) {
-                config.secret = x.split('=')[1]
+                config.secret = value
             }
             if (x.startsWith('rpc-listen-port=')) {
-                port = x.split('=')[1]
+                port = value
             }
             if (x.startsWith('rpc-secure=true')) {
                 ssl = true
@@ -161,8 +215,25 @@ async function load_config_from_aria2_file(path) {
             if (x.startsWith('disable-ipv6=true')) {
                 config.ipv6 = false
             }
-            if (x.startsWith('bt-ban-client-keywords')) {
-                config.block_keywords = x.split('=')[1].split(',')
+            if (x.startsWith('ab-bt-ban-client-keywords')) {
+                config.block_keywords = value.split(',')
+            }
+            // 信任自签 CA 证书
+            if (x.startsWith('ab-rpc-ca')) {
+                config.rpc_options.ca = value
+            }
+            // 信任自签 cert 证书
+            if (x.startsWith('ab-rpc-cert')) {
+                config.rpc_options.cert = value
+            }
+            // 信任需要 key 也提供
+            // 查看更多： https://nodejs.org/api/tls.html （cert）
+            if (x.startsWith('ab-rpc-key')) {
+                config.rpc_options.key = value
+            }
+            // 忽略证书校验
+            if (x.startsWith('ab-rpc-no-verify')) {
+                config.rpc_options.verify = false
             }
             config.rpc_url = `http${ssl ? 's' : ''}://127.0.0.1:${port}/jsonrpc`
         })

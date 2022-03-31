@@ -43,8 +43,9 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
 ## 配置
 目前版本已经默认开箱即用了，欢迎报告 bug  
 abt 会读取本地的 `aria2.conf` 来找 aria2 RPC 端口以及 secret 之类的  
-默认读取的路径为 `/etc/aria2/aria2.conf`  
-可以使用 -c 来指定 aria2 配置文件
+默认读取的路径为 `$HOME/.aria2/aria2.conf` > `/etc/aria2/aria2.conf`  
+主机若为本地则默认关闭证书校验（自行 `update-ca-trust` 让本地系统信任之类的其实更好）  
+可以使用 -c 来指定 aria2 的配置文件
 
     aria2b -c <path>
 
@@ -56,7 +57,11 @@ abt 会读取本地的 `aria2.conf` 来找 aria2 RPC 端口以及 secret 之类�
 目前支持以下配置：  
 
 ```
-bt-ban-client-keywords=XL,SD,XF,QN,BD
+ab-bt-ban-client-keywords=XL,SD,XF,QN,BD
+ab-rpc-ca
+ab-rpc-cert
+ab-rpc-key
+ab-rpc-no-verify
 ```
 ## 守护
 ### systemd
