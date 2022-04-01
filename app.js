@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+/**
+ * aria2b by huggy
+ * https://github.com/makeding/aria2b
+ * 代码写得不好，请多多指教
+ */
 const fs = require('fs')
 const axios = require('axios')
 const argv = require('yargs-parser')(process.argv.slice(2))
@@ -7,6 +12,7 @@ const https = require('https')
 let r_rpc = axios.default.create()
 const { asyncForEach, decodePercentEncodedString, honsole, exec, execR } = require('./common')
 
+// 默认配置
 let config = {
     rpc_url: 'http://127.0.0.1:6800/jsonrpc',
     rpc_options: {
@@ -32,7 +38,7 @@ async function cron() {
         let d = await r_rpc.post(config.rpc_url, {
             jsonrpc: '2.0',
             method: 'aria2.tellActive',
-            id: Buffer.from(`abt-${+new Date()}`).toString('base64'), // 其实就是随机数罢了，形式无所谓，大概
+            id: Buffer.from(`aria2b-${+new Date()}`).toString('base64'), // 其实就是随机值了，形式无所谓，大概，所以之前版本把 uuid 包给砍了，不需要
             params: ['token:' + config.secret, ['gid', 'status']]
         })
         await asyncForEach(d.data.result, async t => {
@@ -40,7 +46,7 @@ async function cron() {
                 let d_peer = await r_rpc.post(config.rpc_url, {
                     jsonrpc: '2.0',
                     method: 'system.multicall',
-                    id: Buffer.from(`abt-${+new Date()}`).toString('base64'),
+                    id: Buffer.from(`aria2b-${+new Date()}`).toString('base64'),
                     params: [[{ 'methodName': 'aria2.getPeers', 'params': ['token:' + config.secret, t.gid] }]]
                 })
                 await asyncForEach(d_peer.data.result[0][0], async peer => {
@@ -73,6 +79,7 @@ async function initial() {
     if (argv.h || argv.help) {
         let name = process.argv0 === 'node' ? `node app.js` : process.argv0
         let prefix = name.split('').map(x => ' ').join('') + ' '
+        // 现在还是中英文混合状态，不知道您有什么想法呢？🙆统一中文还是统一英文又或者保持现状？
         console.log(`aria2b v${require('./package.json').version} by huggy
 
 ${name} -c, --config <aria2 config path>
@@ -101,7 +108,7 @@ https://github.com/makeding/aria2b`)
     // 这里考虑到有些用户可能在 /etc/sudoers 放行了 ipset 所以这里不再判断是不是有权限用户
     // ~~其实是懒，因为下面运行不成功会报错，大概不需要这一句~~
     // if (await exec('whoami') !== 'root') {
-    //     console.log('[abt] 您似乎不是 root 用户 运行的')
+    //     console.log('[aria2b] 您似乎不是 root 用户 运行的')
     //     process.exit(0)
     // }
     // 检查 ipset 配置，如果没有就安排
@@ -123,51 +130,45 @@ https://github.com/makeding/aria2b`)
     }
     // 载入配置 开始
     // 从 aria2 配置文件自动载入
-    let path = argv.c ? argv.c : (argv.config ? argv.config : null)
+    let path = argv.c || argv.config || null
     if (!path) {
         if (fs.existsSync(`${process.env.HOME}/.aria2/aria2.conf`)) {
+            // 网上的教程一圈都是放这的
             path = `${process.env.HOME}/.aria2/aria2.conf`
+        } else if (fs.existsSync('/tmp/etc/aria2/aria2.conf.main')) {
+            // openwrt
+            path = '/tmp/etc/aria2/aria2.conf.main'
         } else if (fs.existsSync(`/etc/aria2/aria2.conf`)) {
+            // 我自己放的地方
             path = `/etc/aria2/aria2.conf`
         } else if (fs.existsSync(`${process.env.PWD}/aria2.conf`)) {
+            // 最后从当前目录碰碰运气
             path = `${process.env.PWD}/aria2.conf`
         }
     }
-    await load_config_from_aria2_file(path)
-    // 后面再从 cli 命令行中覆盖
-    if ((argv.u || argv.url) && (argv.s || argv.secret)) {
-        config.rpc_url = argv.u || argv['rpc-url']
-        config.secret = argv.s || argv.secret
-        config.block_keywords = argv.b || argv['block-keywords'] || config.block_keywords
+    if (path) {
+        await load_config_from_aria2_file(path)
     }
+    // cli 给的配置优先度最高
+    if (argv.u || argv.url) config.rpc_url = argv.u || argv['rpc-url']
+    if (argv.s || argv.secret) config.secret = argv.s || argv.secret
+    if (argv.b || argv['block-keywords']) config.block_keywords = argv.b || argv['block-keywords'] || config.block_keywords
     if (argv['rpc-ca']) config.rpc_options.ca = argv['rpc-ca']
     if (argv['rpc-cert']) config.rpc_options.cert = argv['rpc-cert']
     if (argv['rpc-key']) config.rpc_options.key = argv['rpc-key']
-    if (argv['rpc-no-verify']) config.rpc_options.verify = false
-    // ['ca', 'cert', 'key'].forEach(x => {
-    if (config.rpc_options.ca) {
-        if (config.rpc_options.ca.length > 100) {
-            config.rpc_options.ca = Buffer.from(config.rpc_options.ca, 'base64')
-        } else {
-            config.rpc_options.ca = fs.readFileSync(config.rpc_options.ca)
+    if (argv['rpc-no-verify']) config.rpc_options.verify = false;
+    ['ca', 'cert', 'key'].forEach(x => {
+        if (config.rpc_options[x]) {
+            if (config.rpc_options[x].length > 100) {
+                config.rpc_options[x] = Buffer.from(config.rpc_options[x], 'base64')
+            } else {
+                config.rpc_options[x] = fs.readFileSync(config.rpc_options[x])
+            }
         }
-    }
-    if (config.rpc_options.cert) {
-        if (config.rpc_options.cert.length > 100) {
-            config.rpc_options.cert = Buffer.from(config.rpc_options.cert, 'base64')
-        } else {
-            config.rpc_options.cert = fs.readFileSync(config.rpc_options.cert)
-        }
-    }
-    if (config.rpc_options.key) {
-        if (config.rpc_options.key.length > 100) {
-            config.rpc_options.key = Buffer.from(config.rpc_options.key, 'base64')
-        } else {
-            config.rpc_options.key = fs.readFileSync(config.rpc_options.key)
-        }
-    }
-    // disable ssl verify in localhost
-    if (config.rpc_url.startsWith('https://127') || config.rpc_url.startsWith('http://localhost')) {
+    })
+    // rpc 为 localhost 默认禁用验证
+    // 一个冷知识 127.0.0.1/8 都是 lookback
+    if (config.rpc_url.startsWith('https://127') || config.rpc_url.startsWith('https://localhost')) {
         config.rpc_options.verify = false
     }
     config.rpc_options.rejectUnauthorized = config.rpc_options.verify
@@ -235,6 +236,10 @@ async function load_config_from_aria2_file(path) {
             if (x.startsWith('ab-rpc-no-verify')) {
                 config.rpc_options.verify = false
             }
+            if (x.startsWith('ab-bt-ban-timeout')) {
+                config.timeout = value
+            }
+            // 都本地读取文件了，说明这边大概是 127.0.0.1 ¿
             config.rpc_url = `http${ssl ? 's' : ''}://127.0.0.1:${port}/jsonrpc`
         })
         honsole.log(`读取配置文件(${path})成功`)

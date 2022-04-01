@@ -4,14 +4,14 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
 
 由 [aria2_ban_thunder](https://github.com/makeding/aria2_ban_thunder) 改名而来  
 # 原理
-通过 aria2 RPC （就是API）自动查找迅雷的 peer 然后使用 iptables + ipset 来封禁其 IP （所以 windows 不魔改是没法用的）  
+通过 aria2 RPC （就是API）自动查找不受欢迎的 peer 然后使用 iptables + ipset 来封禁其 IP （所以 Windows / macOS 不魔改是没法用的）  
 
-这是不修改 aria2 源码（其实就是自己太菜了 改不动 C++）而 ban 掉这些客户端的一个办法  
-当然经过简单改造，就可以屏蔽其它的特定客户端了 （现在的默认配置文件已经屏蔽了 迅雷 / 影音先锋 / qq旋风 / 百度网盘）  
+这是不修改 aria2 源码（其实就是自己太菜了 改不动 C++）而 ban 掉这些客户端的一个办法。
 ## 依赖
 `nodejs` `ipset` `iptables`  
 自行参考[Node.js 官方教程](https://github.com/nodesource/distributions/blob/master/README.md)  
 
+开机自动启动 `ipset` `iptables` 按照自己需求来安排
 ### Alpine
 
     apk add iptables ipset nodejs
@@ -20,12 +20,13 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
 ### ArchLinux
     pacman -S ipset yarn
 
-### Centos （真的有人用？）
+### Centos
     yum install ipset
 
 ## 下载
 二选一  
 ### 稳定版（强烈推荐）
+> 同时也是更新命令
 
     npm -i -g aria2b
     # 或者
@@ -40,6 +41,7 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
     # npm install # 也是安装依赖
     node app.js
 
+    git pull # 更新
 ## 配置
 目前版本已经默认开箱即用了，欢迎报告 bug  
 abt 会读取本地的 `aria2.conf` 来找 aria2 RPC 端口以及 secret 之类的  
@@ -58,11 +60,23 @@ abt 会读取本地的 `aria2.conf` 来找 aria2 RPC 端口以及 secret 之类�
 
 ```
 ab-bt-ban-client-keywords=XL,SD,XF,QN,BD
-ab-rpc-ca
-ab-rpc-cert
-ab-rpc-key
-ab-rpc-no-verify
+ab-bt-ban-timeout=86400
 ```
+另外寄生配置不支持结尾带 # 注释
+
+所有配置如下表所示：
+| 描述 | cli |  config  | 默认值 | 备注
+|-|-|-|-|-|
+| rpc url | -u --url | N/A | http://127.0.0.1:6800/jsonrpc 
+| rpc secret | -s --secret | ab-rpc-secret | N/A
+| ban 客户端关键字 | -b --block-keywords | ab-bt-ban-client-keywords | XL,SD,XF,QN,BD | 以,为分割符
+| IP 解除封禁时间 | --timeout | ab-bt-ban-timeout | 86400 | 以秒来计算
+| 关闭证书校验 | --rpc-no-verify | ab-rpc-no-verify| N/A | rpc 为本地时默认关闭证书校验 
+| 自定义信任ca证书 | --rpc-ca | ab-rpc-ca | N/A | 路径/base64两次编码
+| 自定义信任证书 | --rpc-cert | ab-rpc-cert | N/A | 路径/base64两次编码
+| 自定义信任私钥 | --rpc-key | ab-rpc-key | N/A | 路径/base64两次编码
+
+`--rpc-ca` `--rpc-cert` `--rpc-key` 需要同时配置，不然还是会不信任，这是 Node.js 的[设定](https://nodejs.org/api/tls.html)，这里推荐系统去手动信任 ca 证书来完成而不是这么麻烦（搜索关键词 `update-ca-trust`）  
 ## 守护
 ### systemd
 参考配置
@@ -72,7 +86,7 @@ Description=aria2 ban unwelcome clients via ipset
 After=network.target
 
 [Service]
-Type=forking
+Type=simple
 User=root
 Restart=on-failure
 RestartSec=5s
