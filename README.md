@@ -83,7 +83,7 @@ ab-bt-ban-timeout=86400
 ```
 [Unit]
 Description=aria2 ban unwelcome clients via ipset
-After=network.target
+After=network.target aria2.service
 
 [Service]
 Type=simple
@@ -91,17 +91,15 @@ User=root
 Restart=on-failure
 RestartSec=5s
 
-# 这里的路径自己改改
+# 这里的路径自己改改，默认应该是这个
 ExecStart=/usr/local/bin/aria2b
 
 [Install]
 WantedBy=multi-user.target
 ```
-路径：
-> /usr/lib/systemd/system/aria2b.service  
-
+命令：
 ```
-systemctl daemon-reload 
+systemctl edit aria2b --full --force
 systemctl enable aria2b.service --now
 ```
 ### pm2
