@@ -28,7 +28,7 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
 ### 稳定版（强烈推荐）
 > 同时也是更新命令
 
-    npm -i -g aria2b
+    npm i -g aria2b
     # 或者
     yarn global add aria2b
     aria2b
