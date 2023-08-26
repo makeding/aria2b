@@ -25,12 +25,12 @@ async function asyncForEach(array, callback) {
   }
 }
 function dt() {
-  return new Date().toJSON().replace('T', ' ').replace('Z', ' ').split('.')[0]
+  return new Date().toLocaleString('zh')
 }
 
 const honsole = {
   dev: function (...args) {
-    if (process.env.dev) {
+    if (process.env.DEV) {
       console.log('[aria2b]', ...args)
     }
   },
@@ -38,6 +38,9 @@ const honsole = {
     console.log('[aria2b]', ...args)
   },
   logt: function (...args) {
+    if (process.env.HIDE_TIME_PREFIX) {
+      return this.log(...args)
+    }
     console.log('[aria2b]', dt(), ...args)
   },
   error: function (...args) {

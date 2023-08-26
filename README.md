@@ -14,7 +14,7 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
 开机自动启动 `ipset` `iptables` 按照自己需求来安排
 ### Alpine
 
-    apk add iptables ipset nodejs
+    apk add iptables ip6tables ipset nodejs
 ### Ubuntu / Debian
     apt-get install ipset
 ### ArchLinux
@@ -24,7 +24,7 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
     yum install ipset
 
 ## 下载
-二选一  
+三选一  
 ### 稳定版（强烈推荐）
 > 同时也是更新命令
 
@@ -32,6 +32,13 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
     # 或者
     yarn global add aria2b
     aria2b
+### 稳定版但是单文件
+> 适合 OpenWrt 或者不想使用包管理器的你
+
+到 [releases](https://github.com/makeding/aria2b/releases) 下载最新版本
+
+    chmod +x aria2b
+    ./aria2b
 
 ### 开发版
 
@@ -45,7 +52,7 @@ aria2 自动 ban 掉迅雷等不受欢迎客户端的脚本（仅限 Linux）
 ## 配置
 目前版本已经默认开箱即用了，欢迎报告 bug  
 abt 会读取本地的 `aria2.conf` 来找 aria2 RPC 端口以及 secret 之类的  
-默认读取的路径为 `$HOME/.aria2/aria2.conf` > `/etc/aria2/aria2.conf`  
+默认读取的路径为 `$HOME/.aria2/aria2.conf` -> `/tmp/etc/aria2/aria2.conf.main` (OpenWRT)-> `/etc/aria2/aria2.conf` -> `./aria2.conf`  
 主机若为本地则默认关闭证书校验（自行 `update-ca-trust` 让本地系统信任之类的其实更好）  
 可以使用 -c 来指定 aria2 的配置文件
 

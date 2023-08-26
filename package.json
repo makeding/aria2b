@@ -1,6 +1,6 @@
 {
     "name": "aria2b",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "license": "MIT",
     "dependencies": {
         "@huggycn/bittorrent-peerid": "^1.3.4",
