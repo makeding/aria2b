@@ -9,7 +9,9 @@ const axios = require('axios')
 const argv = require('yargs-parser')(process.argv.slice(2))
 const get_peer_name = require('@huggycn/bittorrent-peerid')
 const https = require('https')
-let r_rpc = axios.default.create()
+let r_rpc = axios.default.create({
+    timeout: 60000 // = 60秒
+})
 const { asyncForEach, decodePercentEncodedString, honsole, exec, execR } = require('./common')
 
 // 默认配置
@@ -64,14 +66,12 @@ async function cron() {
                     }
                 })
             }
-            cron_processing_flag = true
         })
     } catch (e) {
-        cron_processing_flag = true
-        console.error('请求错误 日志如下，请检查是否填错 url 和 secret，或者 aria2 进程嗝屁了')
+        console.error('请求错误 日志如下，请检查是否填错 url 和 secret，也有可能是 aria2 进程嗝屁了，或者你的硬盘负载太大已经出现了 I/O hang 的情况。')
         console.error(e)
     }
-
+    cron_processing_flag = true
 }
 // 初始化函数，载入配置之类的
 // 包装成匿名函数也行，不过会有 ;
