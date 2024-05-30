@@ -152,7 +152,7 @@ https://github.com/makeding/aria2b`)
     // cli 给的配置优先度最高
     if (argv.u || argv.url) config.rpc_url = argv.u || argv['rpc-url']
     if (argv.s || argv.secret) config.secret = argv.s || argv.secret
-    if (argv.b || argv['block-keywords']) config.block_keywords = argv.b || argv['block-keywords'] || config.block_keywords
+    if (argv.b || argv['block-keywords']) config.block_keywords = (argv.b || argv['block-keywords']).replace(/ /g, '').split(',')
     if (argv['rpc-ca']) config.rpc_options.ca = argv['rpc-ca']
     if (argv['rpc-cert']) config.rpc_options.cert = argv['rpc-cert']
     if (argv['rpc-key']) config.rpc_options.key = argv['rpc-key']

@@ -125,7 +125,7 @@ pm2 startup
 | 影音先锋 | XF |
 | qq旋风 | QD |
 | 百度网盘 | BN（可能） |
-| 未知 | unknow |
+| 未知 | Unknown （请注意大写） |
 
 以上吸血 peer 参考了来自隔壁的 [qBittorrent-Enhanced-Edition](https://github.com/c0re100/qBittorrent-Enhanced-Edition/blob/ebe908f186be5fa2aba8710a543b3ac5c92b92fa/src/base/bittorrent/session.cpp#L2226) 项目的源码，在这里表示感谢  
 如果还想屏蔽更多的 bt 客户端，可以参考 参考[这边的源码](https://github.com/makeding/bittorrent-peerid/blob/master/index.js#L249)  （没有什么必要啦 就迅雷之类的会吸血）  
