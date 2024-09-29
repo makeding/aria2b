@@ -182,9 +182,10 @@ https://github.com/makeding/aria2b`)
         if (cron_processing_flag) {
             cron()
         }
-    }, 5000) // 频率，自己改改，个人感觉不需要太频繁，反正最多被偷一点点流量。
+    }, scan_interval)
     cron()
 }
+const scan_interval = 5000 // 频率，自己改改，个人感觉不需要太频繁，反正最多被偷一点点流量。单位毫秒
 initial()
 /**
  * 从 aria2 配置文件读取配置
