@@ -53,14 +53,16 @@ async function cron() {
                 })
                 await asyncForEach(d_peer.data.result[0][0], async peer => {
                     let c = get_peer_name(decodePercentEncodedString(peer.peerId))
+                    let toBlock=0
                     if (!blocked_ips.includes(peer.ip)) {
-                        if (config.block_keywords.includes('Unknown') && c.client == 'unknown') {
+                        if (new RegExp('(' + config.block_keywords.join('|') + ')').test(c.origin)) toBlock = 1
+                        if ((config.block_keywords.includes('Unknown') || toBlock == 1) && c.client == 'unknown') {
                             await block_ip(peer.ip, {
                                 origin: 'Unknown',
                                 client: '',
                                 version: ''
                             })
-                        } else if (new RegExp('(' + config.block_keywords.join('|') + ')').test(c.origin)) {
+                        } else if (toBlock == 1) {
                             await block_ip(peer.ip, c)
                         }
                     }
