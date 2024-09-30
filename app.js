@@ -29,12 +29,25 @@ let config = {
         "QD", // QQ旋风
         "BN" // 不清楚 大概是百度网盘把
     ],
+    noprogress_keywords: ['XL', 'SD', 'XF', 'QD', 'BN', 'Unknown'],
+    noprogress_piece: 3, // 上传了这么多 piece 的数据还没有进度就开始计数↓。默认：3
+    noprogress_wait: 10, // ↑计数到这么多次还是没有进度就 ban。默认：10
     ipv6: false
 }
 // 保留
 let blocked_ips = []
 let cron_processing_flag = true
 let torrentInfo = {}    // [peerId] = [gid, numPieces, pieceLength]
+let peerUploaded = {}   // [peerId] = [uploaded, over 5 timeout]
+
+function countOnes(n) {
+    let count = 0;
+    while (n !== 0) {
+        n = n & (n - 1);
+        count++;
+    }
+    return count;
+}
 
 async function cron() {
     cron_processing_flag = false
@@ -66,8 +79,29 @@ async function cron() {
                 await asyncForEach(d_peer.data.result[0][0], async peer => {
                     let c = get_peer_name(decodePercentEncodedString(peer.peerId))
                     let toBlock=0
+                    let bitprogress = countOnes(parseInt("0x"+peer.bitfield))
                     if (!blocked_ips.includes(peer.ip)) {
                         if (new RegExp('(' + config.block_keywords.join('|') + ')').test(c.origin)) toBlock = 1
+                        else {
+                            if (((config.noprogress_keywords.includes('Unknown') && c.client == 'unknown') || new RegExp('(' + config.noprogress_keywords.join('|') + ')').test(c.origin)) && peer.uploadSpeed > 1024 && bitprogress == 0){
+                                if (peerUploaded[[peer.peerId,0]] == undefined) peerUploaded[[peer.peerId,0]] = 0
+                                peerUploaded[[peer.peerId,0]] += peer.uploadSpeed * scan_interval / 1000
+                                let uploadPiece = peerUploaded[[peer.peerId,0]] / torrentInfo[peer.peerId][2]
+                                if ( uploadPiece > config.noprogress_piece){
+                                    if(peerUploaded[[peer.peerId,1]] == undefined) peerUploaded[[peer.peerId,1]] = 0
+                                    if(bitprogress == 0 && peer.downloadSpeed == 0){
+                                        peerUploaded[[peer.peerId,1]] += 1
+                                        if (peerUploaded[[peer.peerId,1]] > config.noprogress_wait) {
+                                            honsole.log(`往 ${peer.peerId} 传输了 ${uploadPiece} 个piece，但它声称进度 ${countOnes(parseInt("0x"+peer.bitfield))}/${torrentInfo[peer.peerId][1]} ，累犯 ${peerUploaded[[peer.peerId,1]]} 次，ban了`)
+                                            toBlock = 1
+                                        }
+                                    }
+                                    else{
+                                        peerUploaded[[peer.peerId,1]] = 0
+                                    }
+                                }
+                            }
+                        }
                         if ((config.block_keywords.includes('Unknown') || toBlock == 1) && c.client == 'unknown') {
                             await block_ip(peer.ip, {
                                 origin: 'Unknown',
