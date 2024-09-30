@@ -34,6 +34,8 @@ let config = {
 // 保留
 let blocked_ips = []
 let cron_processing_flag = true
+let torrentInfo = {}    // [peerId] = [gid, numPieces, pieceLength]
+
 async function cron() {
     cron_processing_flag = false
     try {
@@ -45,12 +47,22 @@ async function cron() {
         })
         await asyncForEach(d.data.result, async t => {
             if (t.status == 'active') {
+                let d_torr = await r_rpc.post(config.rpc_url, {
+                    jsonrpc: '2.0',
+                    method: 'system.multicall',
+                    id: Buffer.from(`aria2b-${+new Date()}`).toString('base64'),
+                    params: [[{ 'methodName': 'aria2.tellStatus', 'params': ['token:' + config.secret, t.gid] }]]
+                })
                 let d_peer = await r_rpc.post(config.rpc_url, {
                     jsonrpc: '2.0',
                     method: 'system.multicall',
                     id: Buffer.from(`aria2b-${+new Date()}`).toString('base64'),
                     params: [[{ 'methodName': 'aria2.getPeers', 'params': ['token:' + config.secret, t.gid] }]]
                 })
+                for(peer in d_peer.data.result[0][0]){
+                    //honsole.log(`remembering ${t.gid}`)
+                    torrentInfo[d_peer.data.result[0][0][peer].peerId] = [t.gid, d_torr.data.result[0][0].numPieces, d_torr.data.result[0][0].pieceLength]
+                }
                 await asyncForEach(d_peer.data.result[0][0], async peer => {
                     let c = get_peer_name(decodePercentEncodedString(peer.peerId))
                     let toBlock=0
