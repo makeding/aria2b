@@ -77,6 +77,9 @@ ab-bt-ban-timeout=86400
 | rpc url | -u --url | N/A | http://127.0.0.1:6800/jsonrpc 
 | rpc secret | -s --secret | ab-rpc-secret | N/A
 | ban 客户端关键字 | -b --block-keywords | ab-bt-ban-client-keywords | XL,SD,XF,QN,BD | 以,为分割符
+| 需监视进度的客户端关键字 | --noprogress-keywords | ab-bt-noprogress-keywords | XL,SD,XF,QN,BD,Unknown | 以,为分割符
+| 进度阈值 | --noprogress-piece| ab-bt-noprogress-piece | 5 | 单位：种子的片段数
+| 超过阈值等待次数 | --noprogress-wait | ab-bt-noprogress-wait | 10 |
 | IP 解除封禁时间 | --timeout | ab-bt-ban-timeout | 86400 | 以秒来计算
 | 关闭证书校验 | --rpc-no-verify | ab-rpc-no-verify| N/A | rpc 为本地时默认关闭证书校验 
 | 自定义信任ca证书 | --rpc-ca | ab-rpc-ca | N/A | 路径/base64两次编码

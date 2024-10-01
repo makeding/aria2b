@@ -135,6 +135,11 @@ ${prefix}-u,--url <rpc url> (default: http://127.0.0.1:6800/jsonrpc)
 ${prefix}-s, --secret <secret>
 ${prefix}--timeout <seconds> (default: 86400)
 ${prefix}--block_keywords <string>
+${prefix}--noprogress-keywords <string>
+${prefix}--noprogress-piece <int> (default: 5)
+${prefix}--noprogress-wait <int> (default: 10)
+    Monitors the progress of peers matching the keywords in <noprogress-keywords>. If the upload to the peer exceeds <noprogress-piece> pieces and the peer has not reported progress for <noprogress-wait> times, the peer will be blocked.
+
 ${prefix}--flush flush ipset bt_blacklist(6)
 
 -----Advanced Options-----
@@ -201,6 +206,9 @@ https://github.com/makeding/aria2b`)
     if (argv.u || argv.url) config.rpc_url = argv.u || argv['rpc-url']
     if (argv.s || argv.secret) config.secret = argv.s || argv.secret
     if (argv.b || argv['block-keywords']) config.block_keywords = (argv.b || argv['block-keywords']).replace(/ /g, '').split(',')
+    if (argv['noprogress-keywords']) config.noprogress_keywords = (argv['noprogress-keywords']).replace(/ /g, '').split(',')
+    if (argv['noprogress-piece']) config.noprogress_piece = argv['noprogress-piece']
+    if (argv['noprogress-wait']) config.noprogress_wait = argv['noprogress-wait']
     if (argv['rpc-ca']) config.rpc_options.ca = argv['rpc-ca']
     if (argv['rpc-cert']) config.rpc_options.cert = argv['rpc-cert']
     if (argv['rpc-key']) config.rpc_options.key = argv['rpc-key']
@@ -267,6 +275,15 @@ async function load_config_from_aria2_file(path) {
             }
             if (x.startsWith('ab-bt-ban-client-keywords')) {
                 config.block_keywords = value.split(',')
+            }
+            if (x.startsWith('ab-bt-noprogress-keywords')) {
+                config.noprogress_keywords = value.split(',')
+            }
+            if (x.startsWith('ab-bt-noprogress-piece')) {
+                config.noprogress_piece = value
+            }
+            if (x.startsWith('ab-bt-noprogress-wait')) {
+                config.noprogress_wait = value
             }
             // 信任自签 CA 证书
             if (x.startsWith('ab-rpc-ca')) {
