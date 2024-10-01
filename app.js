@@ -86,7 +86,7 @@ ${name} -c, --config <aria2 config path>
 ${prefix}-u,--url <rpc url> (default: http://127.0.0.1:6800/jsonrpc)
 ${prefix}-s, --secret <secret>
 ${prefix}--timeout <seconds> (default: 86400)
-${prefix}--block_keywords <string>
+${prefix}--block-keywords <string>
 ${prefix}--flush flush ipset bt_blacklist(6)
 
 -----Advanced Options-----
@@ -167,7 +167,7 @@ https://github.com/makeding/aria2b`)
         }
     })
     // rpc 为 localhost 默认禁用验证
-    // 一个冷知识 127.0.0.1/8 都是 lookback
+    // 一个冷知识 127.0.0.1/8 都是 loopback
     if (config.rpc_url.startsWith('https://127') || config.rpc_url.startsWith('https://localhost')) {
         config.rpc_options.verify = false
     }
