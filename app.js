@@ -53,7 +53,12 @@ function decodeClient(str) {
 
 function countOnes(hexString) {
     // 将十六进制字符串转换为二进制字符串
-    const binaryString = BigInt(`0x${hexString}`).toString(2);
+    let binaryString
+    try{
+        binaryString = BigInt(`0x${hexString}`).toString(2)
+    } catch(e){
+        binaryString = "0"
+    }
     // 计算二进制字符串中1的个数
     let count = 0;
     for (const char of binaryString) {
