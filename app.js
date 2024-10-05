@@ -37,8 +37,7 @@ let config = {
 // 保留
 let blocked_ips = []
 let cron_processing_flag = true
-let torrentInfo = {}    // [peerId] = [gid, numPieces, pieceLength]
-let peerUploaded = {}   // [peerId] = [uploaded, over 5 timeout]
+let peerUploaded = []   // [peerId,gid,type] = [uploaded, over 5 timeout]
 
 function decodeClient(str) {
     return str.replace(/%[0-9A-Fa-f]{2}/g, match => {
@@ -72,6 +71,7 @@ function countOnes(hexString) {
 async function cron() {
     cron_processing_flag = false
     try {
+        let torrentInfo = []    // [gid] = [numPieces, pieceLength]
         let d = await r_rpc.post(config.rpc_url, {
             jsonrpc: '2.0',
             method: 'aria2.tellActive',
@@ -94,7 +94,7 @@ async function cron() {
                 })
                 for(peer in d_peer.data.result[0][0]){
                     //honsole.log(`remembering ${t.gid}`)
-                    torrentInfo[d_peer.data.result[0][0][peer].peerId] = [t.gid, d_torr.data.result[0][0].numPieces, d_torr.data.result[0][0].pieceLength]
+                    torrentInfo[t.gid] = [t.gid, d_torr.data.result[0][0].numPieces, d_torr.data.result[0][0].pieceLength]
                 }
                 await asyncForEach(d_peer.data.result[0][0], async peer => {
                     let c = get_peer_name(decodePercentEncodedString(peer.peerId))
@@ -104,20 +104,20 @@ async function cron() {
                         if (new RegExp('(' + config.block_keywords.join('|') + ')').test(c.origin)) toBlock = 1
                         else {
                             if (((config.noprogress_keywords.includes('Unknown') && c.client == 'unknown') || new RegExp('(' + config.noprogress_keywords.join('|') + ')').test(c.origin)) && peer.uploadSpeed > 1024 && bitprogress == 0){
-                                if (peerUploaded[[peer.peerId,0]] == undefined) peerUploaded[[peer.peerId,0]] = 0
-                                peerUploaded[[peer.peerId,0]] += peer.uploadSpeed * scan_interval / 1000
-                                let uploadPiece = peerUploaded[[peer.peerId,0]] / torrentInfo[peer.peerId][2]
+                                if (peerUploaded[[peer.peerId,t.gid,0]] == undefined) peerUploaded[[peer.peerId,t.gid,0]] = 0
+                                peerUploaded[[peer.peerId,t.gid,0]] += peer.uploadSpeed * scan_interval / 1000
+                                let uploadPiece = peerUploaded[[peer.peerId,t.gid,0]] / torrentInfo[t.gid][1]
                                 if ( uploadPiece > config.noprogress_piece){
-                                    if(peerUploaded[[peer.peerId,1]] == undefined) peerUploaded[[peer.peerId,1]] = 0
+                                    if(peerUploaded[[peer.peerId,t.gid,1]] == undefined) peerUploaded[[peer.peerId,t.gid,1]] = 0
                                     if(bitprogress == 0 && peer.downloadSpeed == 0){
-                                        peerUploaded[[peer.peerId,1]] += 1
-                                        if (peerUploaded[[peer.peerId,1]] > config.noprogress_wait) {
-                                            honsole.log(`往 ${decodeClient(peer.peerId).substring(0, 16).padEnd(16, ' ')}（${peer.ip}）\t传输了 ${String(uploadPiece).substring(0,8)}\t个piece，但它声称进度 ${countOnes(peer.bitfield)}/${torrentInfo[peer.peerId][1]} ，累犯 ${peerUploaded[[peer.peerId,1]]} 次，ban了`)
+                                        peerUploaded[[peer.peerId,t.gid,1]] += 1
+                                        if (peerUploaded[[peer.peerId,t.gid,1]] > config.noprogress_wait) {
+                                            honsole.log(`往 ${decodeClient(peer.peerId).substring(0, 16).padEnd(16, ' ')}（${peer.ip}）\t传输了 ${String(uploadPiece).substring(0,8)}\t个piece，但它声称进度 ${countOnes(peer.bitfield)}/${torrentInfo[t.gid][0]} ，累犯 ${peerUploaded[[peer.peerId,t.gid,1]]} 次，ban了`)
                                             toBlock = 1
                                         }
                                     }
                                     else{
-                                        peerUploaded[[peer.peerId,1]] = 0
+                                        peerUploaded[[peer.peerId,t.gid,1]] = 0
                                     }
                                 }
                             }
