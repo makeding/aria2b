@@ -40,11 +40,16 @@ let cron_processing_flag = true
 let torrentInfo = {}    // [peerId] = [gid, numPieces, pieceLength]
 let peerUploaded = {}   // [peerId] = [uploaded, over 5 timeout]
 
-function countOnes(n) {
+
+function countOnes(hexString) {
+    // 将十六进制字符串转换为二进制字符串
+    const binaryString = BigInt(`0x${hexString}`).toString(2);
+    // 计算二进制字符串中1的个数
     let count = 0;
-    while (n !== 0) {
-        n = n & (n - 1);
+    for (const char of binaryString) {
+        if (char === '1') {
         count++;
+        }
     }
     return count;
 }
@@ -79,7 +84,7 @@ async function cron() {
                 await asyncForEach(d_peer.data.result[0][0], async peer => {
                     let c = get_peer_name(decodePercentEncodedString(peer.peerId))
                     let toBlock=0
-                    let bitprogress = countOnes(parseInt("0x"+peer.bitfield))
+                    let bitprogress = countOnes(peer.bitfield)
                     if (!blocked_ips.includes(peer.ip)) {
                         if (new RegExp('(' + config.block_keywords.join('|') + ')').test(c.origin)) toBlock = 1
                         else {
@@ -92,7 +97,7 @@ async function cron() {
                                     if(bitprogress == 0 && peer.downloadSpeed == 0){
                                         peerUploaded[[peer.peerId,1]] += 1
                                         if (peerUploaded[[peer.peerId,1]] > config.noprogress_wait) {
-                                            honsole.log(`往 ${peer.peerId} 传输了 ${uploadPiece} 个piece，但它声称进度 ${countOnes(parseInt("0x"+peer.bitfield))}/${torrentInfo[peer.peerId][1]} ，累犯 ${peerUploaded[[peer.peerId,1]]} 次，ban了`)
+                                            honsole.log(`往 ${peer.peerId} 传输了 ${uploadPiece} 个piece，但它声称进度 ${countOnes(peer.bitfield)}/${torrentInfo[peer.peerId][1]} ，累犯 ${peerUploaded[[peer.peerId,1]]} 次，ban了`)
                                             toBlock = 1
                                         }
                                     }
