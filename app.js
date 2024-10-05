@@ -40,6 +40,16 @@ let cron_processing_flag = true
 let torrentInfo = {}    // [peerId] = [gid, numPieces, pieceLength]
 let peerUploaded = {}   // [peerId] = [uploaded, over 5 timeout]
 
+function decodeClient(str) {
+    return str.replace(/%[0-9A-Fa-f]{2}/g, match => {
+        const charCode = parseInt(match.slice(1), 16);
+        // Decode only if the character is printable ASCII
+        if (charCode >= 32 && charCode <= 126) {
+            return String.fromCharCode(charCode);
+        }
+        return match; // Preserve the original encoding for unprintable characters
+    });
+}
 
 function countOnes(hexString) {
     // 将十六进制字符串转换为二进制字符串
@@ -97,7 +107,7 @@ async function cron() {
                                     if(bitprogress == 0 && peer.downloadSpeed == 0){
                                         peerUploaded[[peer.peerId,1]] += 1
                                         if (peerUploaded[[peer.peerId,1]] > config.noprogress_wait) {
-                                            honsole.log(`往 ${peer.peerId} 传输了 ${uploadPiece} 个piece，但它声称进度 ${countOnes(peer.bitfield)}/${torrentInfo[peer.peerId][1]} ，累犯 ${peerUploaded[[peer.peerId,1]]} 次，ban了`)
+                                            honsole.log(`往 ${decodeClient(peer.peerId).substring(0, 16).padEnd(16, ' ')}（${peer.ip}）\t传输了 ${String(uploadPiece).substring(0,8)}\t个piece，但它声称进度 ${countOnes(peer.bitfield)}/${torrentInfo[peer.peerId][1]} ，累犯 ${peerUploaded[[peer.peerId,1]]} 次，ban了`)
                                             toBlock = 1
                                         }
                                     }
