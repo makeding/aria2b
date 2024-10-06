@@ -30,7 +30,7 @@ let config = {
         "BN" // 不清楚 大概是百度网盘把
     ],
     noprogress_keywords: ['XL', 'SD', 'XF', 'QD', 'BN', 'Unknown'],
-    noprogress_piece: 3, // 上传了这么多 piece 的数据还没有进度就开始计数↓。默认：3
+    noprogress_piece: 5, // 上传了这么多 piece 的数据还没有进度就开始计数↓。默认：5
     noprogress_wait: 10, // ↑计数到这么多次还是没有进度就 ban。默认：10
     ipv6: false
 }
@@ -48,6 +48,17 @@ function decodeClient(str) {
         }
         return match; // Preserve the original encoding for unprintable characters
     });
+}
+
+function printpeer(peer,c,torrentInfo){
+    let out = []
+    out.push(decodeClient(peer.peerId).substring(0, 14).padEnd(14, ' '));
+    out.push(peer.ip.padEnd(9, ' ').substring(0, 15));
+    out.push(c.client.substring(0, 7));
+    out.push(String(c.version).substring(0, 7));
+    out.push(String(parseInt(peer.uploadSpeed / 1024))); // Uploaded piece
+    out.push(`${countOnes(peer.bitfield)}\t${torrentInfo[0]}`);
+    honsole.log(out.join('\t'));
 }
 
 function countOnes(hexString) {
@@ -100,14 +111,18 @@ async function cron() {
                     let c = get_peer_name(decodePercentEncodedString(peer.peerId))
                     let toBlock=0
                     let bitprogress = countOnes(peer.bitfield)
+                    //printpeer(peer,c,torrentInfo[t.gid])
                     if (!blocked_ips.includes(peer.ip)) {
                         if (new RegExp('(' + config.block_keywords.join('|') + ')').test(c.origin)) toBlock = 1
                         else {
                             if (((config.noprogress_keywords.includes('Unknown') && c.client == 'unknown') || new RegExp('(' + config.noprogress_keywords.join('|') + ')').test(c.origin)) && peer.uploadSpeed > 1024 && bitprogress == 0){
+                                //初筛：(名称符合) && 上传速度大于1KiB && 进度为0
+                                //printpeer(peer,c,torrentInfo[t.gid])
                                 if (peerUploaded[[peer.peerId,t.gid,0]] == undefined) peerUploaded[[peer.peerId,t.gid,0]] = 0
-                                peerUploaded[[peer.peerId,t.gid,0]] += peer.uploadSpeed * scan_interval / 1000
-                                let uploadPiece = peerUploaded[[peer.peerId,t.gid,0]] / torrentInfo[t.gid][1]
+                                peerUploaded[[peer.peerId,t.gid,0]] += peer.uploadSpeed * scan_interval / 1000  //累加计算上传量
+                                let uploadPiece = peerUploaded[[peer.peerId,t.gid,0]] / torrentInfo[t.gid][1]   //以分片数量为单位
                                 if ( uploadPiece > config.noprogress_piece){
+                                    //上传量大于noprogress_piece后开始表演节目《老子数到十》
                                     if(peerUploaded[[peer.peerId,t.gid,1]] == undefined) peerUploaded[[peer.peerId,t.gid,1]] = 0
                                     if(bitprogress == 0 && peer.downloadSpeed == 0){
                                         peerUploaded[[peer.peerId,t.gid,1]] += 1
@@ -123,6 +138,7 @@ async function cron() {
                             }
                         }
                         if ((config.block_keywords.includes('Unknown') || toBlock == 1) && c.client == 'unknown') {
+                            //这里比较偷懒所以尽可能直接用了huggy的代码，但逻辑好像似乎应该是没有漏洞的
                             await block_ip(peer.ip, {
                                 origin: 'Unknown',
                                 client: '',
@@ -154,7 +170,7 @@ ${name} -c, --config <aria2 config path>
 ${prefix}-u,--url <rpc url> (default: http://127.0.0.1:6800/jsonrpc)
 ${prefix}-s, --secret <secret>
 ${prefix}--timeout <seconds> (default: 86400)
-${prefix}--block_keywords <string>
+${prefix}--blockkeywords <string>
 ${prefix}--noprogress-keywords <string>
 ${prefix}--noprogress-piece <int> (default: 5)
 ${prefix}--noprogress-wait <int> (default: 10)
