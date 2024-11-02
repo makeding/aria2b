@@ -29,14 +29,60 @@ let config = {
         "QD", // QQ旋风
         "BN" // 不清楚 大概是百度网盘把
     ],
+    noprogress_keywords: ['XL', 'SD', 'XF', 'QD', 'BN', 'Unknown'],
+    noprogress_piece: 5, // 上传了这么多 piece 的数据还没有进度就开始计数↓。默认：5
+    noprogress_wait: 10, // ↑计数到这么多次还是没有进度就 ban。默认：10
     ipv6: false
 }
 // 保留
 let blocked_ips = []
 let cron_processing_flag = true
+let peerUploaded = []   // [peerId,gid,type] = [uploaded, over 5 timeout]
+
+function decodeClient(str) {
+    return str.replace(/%[0-9A-Fa-f]{2}/g, match => {
+        const charCode = parseInt(match.slice(1), 16);
+        // Decode only if the character is printable ASCII
+        if (charCode >= 32 && charCode <= 126) {
+            return String.fromCharCode(charCode);
+        }
+        return match; // Preserve the original encoding for unprintable characters
+    });
+}
+
+function printpeer(peer,c,torrentInfo){
+    let out = []
+    out.push(decodeClient(peer.peerId).substring(0, 14).padEnd(14, ' '));
+    out.push(peer.ip.padEnd(9, ' ').substring(0, 15));
+    out.push(c.client.substring(0, 7));
+    out.push(String(c.version).substring(0, 7));
+    out.push(String(parseInt(peer.uploadSpeed / 1024))); // Uploaded piece
+    out.push(`${countOnes(peer.bitfield)}\t${torrentInfo[0]}`);
+    honsole.log(out.join('\t'));
+}
+
+function countOnes(hexString) {
+    // 将十六进制字符串转换为二进制字符串
+    let binaryString
+    try{
+        binaryString = BigInt(`0x${hexString}`).toString(2)
+    } catch(e){
+        binaryString = "0"
+    }
+    // 计算二进制字符串中1的个数
+    let count = 0;
+    for (const char of binaryString) {
+        if (char === '1') {
+        count++;
+        }
+    }
+    return count;
+}
+
 async function cron() {
     cron_processing_flag = false
     try {
+        let torrentInfo = []    // [gid] = [numPieces, pieceLength]
         let d = await r_rpc.post(config.rpc_url, {
             jsonrpc: '2.0',
             method: 'aria2.tellActive',
@@ -45,22 +91,60 @@ async function cron() {
         })
         await asyncForEach(d.data.result, async t => {
             if (t.status == 'active') {
+                let d_torr = await r_rpc.post(config.rpc_url, {
+                    jsonrpc: '2.0',
+                    method: 'system.multicall',
+                    id: Buffer.from(`aria2b-${+new Date()}`).toString('base64'),
+                    params: [[{ 'methodName': 'aria2.tellStatus', 'params': ['token:' + config.secret, t.gid] }]]
+                })
                 let d_peer = await r_rpc.post(config.rpc_url, {
                     jsonrpc: '2.0',
                     method: 'system.multicall',
                     id: Buffer.from(`aria2b-${+new Date()}`).toString('base64'),
                     params: [[{ 'methodName': 'aria2.getPeers', 'params': ['token:' + config.secret, t.gid] }]]
                 })
+                for(peer in d_peer.data.result[0][0]){
+                    //honsole.log(`remembering ${t.gid}`)
+                    torrentInfo[t.gid] = [t.gid, d_torr.data.result[0][0].numPieces, d_torr.data.result[0][0].pieceLength]
+                }
                 await asyncForEach(d_peer.data.result[0][0], async peer => {
                     let c = get_peer_name(decodePercentEncodedString(peer.peerId))
+                    let toBlock=0
+                    let bitprogress = countOnes(peer.bitfield)
+                    //printpeer(peer,c,torrentInfo[t.gid])
                     if (!blocked_ips.includes(peer.ip)) {
-                        if (config.block_keywords.includes('Unknown') && c.client == 'unknown') {
+                        if (new RegExp('(' + config.block_keywords.join('|') + ')').test(c.origin)) toBlock = 1
+                        else {
+                            if (((config.noprogress_keywords.includes('Unknown') && c.client == 'unknown') || new RegExp('(' + config.noprogress_keywords.join('|') + ')').test(c.origin)) && peer.uploadSpeed > 1024 && bitprogress == 0){
+                                //初筛：(名称符合) && 上传速度大于1KiB && 进度为0
+                                //printpeer(peer,c,torrentInfo[t.gid])
+                                if (peerUploaded[[peer.peerId,t.gid,0]] == undefined) peerUploaded[[peer.peerId,t.gid,0]] = 0
+                                peerUploaded[[peer.peerId,t.gid,0]] += peer.uploadSpeed * scan_interval / 1000  //累加计算上传量
+                                let uploadPiece = peerUploaded[[peer.peerId,t.gid,0]] / torrentInfo[t.gid][1]   //以分片数量为单位
+                                if ( uploadPiece > config.noprogress_piece){
+                                    //上传量大于noprogress_piece后开始表演节目《老子数到十》
+                                    if(peerUploaded[[peer.peerId,t.gid,1]] == undefined) peerUploaded[[peer.peerId,t.gid,1]] = 0
+                                    if(bitprogress == 0 && peer.downloadSpeed == 0){
+                                        peerUploaded[[peer.peerId,t.gid,1]] += 1
+                                        if (peerUploaded[[peer.peerId,t.gid,1]] > config.noprogress_wait) {
+                                            honsole.log(`往 ${decodeClient(peer.peerId).substring(0, 16).padEnd(16, ' ')}（${peer.ip}）\t传输了 ${String(uploadPiece).substring(0,8)}\t个piece，但它声称进度 ${countOnes(peer.bitfield)}/${torrentInfo[t.gid][0]} ，累犯 ${peerUploaded[[peer.peerId,t.gid,1]]} 次，ban了`)
+                                            toBlock = 1
+                                        }
+                                    }
+                                    else{
+                                        peerUploaded[[peer.peerId,t.gid,1]] = 0
+                                    }
+                                }
+                            }
+                        }
+                        if ((config.block_keywords.includes('Unknown') || toBlock == 1) && c.client == 'unknown') {
+                            //这里比较偷懒所以尽可能直接用了huggy的代码，但逻辑好像似乎应该是没有漏洞的
                             await block_ip(peer.ip, {
                                 origin: 'Unknown',
                                 client: '',
                                 version: ''
                             })
-                        } else if (new RegExp('(' + config.block_keywords.join('|') + ')').test(c.origin)) {
+                        } else if (toBlock == 1) {
                             await block_ip(peer.ip, c)
                         }
                     }
@@ -87,6 +171,11 @@ ${prefix}-u,--url <rpc url> (default: http://127.0.0.1:6800/jsonrpc)
 ${prefix}-s, --secret <secret>
 ${prefix}--timeout <seconds> (default: 86400)
 ${prefix}--block-keywords <string>
+${prefix}--noprogress-keywords <string>
+${prefix}--noprogress-piece <int> (default: 5)
+${prefix}--noprogress-wait <int> (default: 10)
+    Monitors the progress of peers matching the keywords in <noprogress-keywords>. If the upload to the peer exceeds <noprogress-piece> pieces and the peer has not reported progress for <noprogress-wait> times, the peer will be blocked.
+
 ${prefix}--flush flush ipset bt_blacklist(6)
 
 -----Advanced Options-----
@@ -153,6 +242,9 @@ https://github.com/makeding/aria2b`)
     if (argv.u || argv.url) config.rpc_url = argv.u || argv['rpc-url']
     if (argv.s || argv.secret) config.secret = argv.s || argv.secret
     if (argv.b || argv['block-keywords']) config.block_keywords = (argv.b || argv['block-keywords']).replace(/ /g, '').split(',')
+    if (argv['noprogress-keywords']) config.noprogress_keywords = (argv['noprogress-keywords']).replace(/ /g, '').split(',')
+    if (argv['noprogress-piece']) config.noprogress_piece = argv['noprogress-piece']
+    if (argv['noprogress-wait']) config.noprogress_wait = argv['noprogress-wait']
     if (argv['rpc-ca']) config.rpc_options.ca = argv['rpc-ca']
     if (argv['rpc-cert']) config.rpc_options.cert = argv['rpc-cert']
     if (argv['rpc-key']) config.rpc_options.key = argv['rpc-key']
@@ -182,9 +274,10 @@ https://github.com/makeding/aria2b`)
         if (cron_processing_flag) {
             cron()
         }
-    }, 5000) // 频率，自己改改，个人感觉不需要太频繁，反正最多被偷一点点流量。
+    }, scan_interval)
     cron()
 }
+const scan_interval = 5000 // 频率，自己改改，个人感觉不需要太频繁，反正最多被偷一点点流量。单位毫秒
 initial()
 /**
  * 从 aria2 配置文件读取配置
@@ -218,6 +311,15 @@ async function load_config_from_aria2_file(path) {
             }
             if (x.startsWith('ab-bt-ban-client-keywords')) {
                 config.block_keywords = value.split(',')
+            }
+            if (x.startsWith('ab-bt-noprogress-keywords')) {
+                config.noprogress_keywords = value.split(',')
+            }
+            if (x.startsWith('ab-bt-noprogress-piece')) {
+                config.noprogress_piece = value
+            }
+            if (x.startsWith('ab-bt-noprogress-wait')) {
+                config.noprogress_wait = value
             }
             // 信任自签 CA 证书
             if (x.startsWith('ab-rpc-ca')) {
